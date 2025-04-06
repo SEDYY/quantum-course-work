@@ -1,0 +1,16 @@
+.container {
+    padding: 20px;
+  }
+  
+  .productList {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+  }
+  
+  .productCard {
+    border: 1px solid rgb(0, 0, 0);
+    padding: 10px;
+    width: 200px;
+    background-color: #686868;
+  }
