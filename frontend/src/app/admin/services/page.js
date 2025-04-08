@@ -1,61 +1,104 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import styles from '../../styles/AdminServices.module.css'
+import styles from '../../styles/AdminServices.module.css';
 
 export default function AdminServices() {
   const [services, setServices] = useState([]);
   const [newService, setNewService] = useState({ name: '', description: '', price: '' });
   const [editingService, setEditingService] = useState(null);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     fetchServices();
   }, []);
 
   const fetchServices = async () => {
-    const res = await fetch('http://localhost:3001/api/services');
-    const data = await res.json();
-    setServices(data);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch('http://localhost:3001/api/services', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      if (!res.ok) throw new Error(`Ошибка HTTP: ${res.status}`);
+      const data = await res.json();
+      setServices(data);
+      setError(null);
+    } catch (err) {
+      console.error('Ошибка при загрузке услуг:', err.message);
+      setError('Не удалось загрузить услуги. Проверьте подключение к серверу.');
+    }
   };
 
   const handleCreate = async () => {
-    const res = await fetch('http://localhost:3001/api/services', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newService),
-    });
-    if (res.ok) {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch('http://localhost:3001/api/services', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(newService),
+      });
+      if (!res.ok) throw new Error(`Ошибка HTTP: ${res.status}`);
       const createdService = await res.json();
       setServices([...services, createdService]);
       setNewService({ name: '', description: '', price: '' });
+      fetchServices();
+    } catch (err) {
+      console.error('Ошибка при создании услуги:', err.message);
+      setError('Не удалось создать услугу.');
     }
   };
 
   const handleUpdate = async () => {
-    const res = await fetch(`http://localhost:3001/api/services/${editingService.id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(editingService),
-    });
-    if (res.ok) {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`http://localhost:3001/api/services/${editingService.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(editingService),
+      });
+      if (!res.ok) throw new Error('Ошибка при обновлении услуги');
       const updatedService = await res.json();
       setServices(services.map((s) => (s.id === updatedService.id ? updatedService : s)));
       setEditingService(null);
+      fetchServices();
+    } catch (err) {
+      console.error('Ошибка при обновлении услуги:', err.message);
+      setError('Не удалось обновить услугу.');
     }
   };
 
   const handleDelete = async (id) => {
-    const res = await fetch(`http://localhost:3001/api/services/${id}`, { method: 'DELETE' });
-    if (res.ok) {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`http://localhost:3001/api/services/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      if (!res.ok) throw new Error('Ошибка при удалении услуги');
       setServices(services.filter((s) => s.id !== id));
+      fetchServices();
+    } catch (err) {
+      console.error('Ошибка при удалении услуги:', err.message);
+      setError('Не удалось удалить услугу.');
     }
   };
 
   return (
     <div className={styles.container}>
       <h1>Управление услугами</h1>
+      {error && <p className={styles.error}>{error}</p>}
 
-      {/* Форма для добавления услуги */}
       <div className={styles.form}>
         <input
           type="text"
@@ -63,8 +106,7 @@ export default function AdminServices() {
           value={newService.name}
           onChange={(e) => setNewService({ ...newService, name: e.target.value })}
         />
-        <input
-          type="text"
+        <textarea
           placeholder="Описание"
           value={newService.description}
           onChange={(e) => setNewService({ ...newService, description: e.target.value })}
@@ -78,7 +120,6 @@ export default function AdminServices() {
         <button onClick={handleCreate}>Добавить услугу</button>
       </div>
 
-      {/* Таблица услуг */}
       <table className={styles.table}>
         <thead>
           <tr>
@@ -103,7 +144,6 @@ export default function AdminServices() {
         </tbody>
       </table>
 
-      {/* Форма для редактирования услуги */}
       {editingService && (
         <div className={styles.form}>
           <h2>Редактировать услугу</h2>
@@ -112,8 +152,7 @@ export default function AdminServices() {
             value={editingService.name}
             onChange={(e) => setEditingService({ ...editingService, name: e.target.value })}
           />
-          <input
-            type="text"
+          <textarea
             value={editingService.description}
             onChange={(e) => setEditingService({ ...editingService, description: e.target.value })}
           />

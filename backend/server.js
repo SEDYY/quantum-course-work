@@ -1,11 +1,19 @@
 const express = require('express');
-const { Pool } = require('pg');
 const cors = require('cors');
+const { Pool } = require('pg');
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 const app = express();
 const port = 3001;
-const apiRoutes = require('./routes/api'); // Подключаем маршруты
+const apiRoutes = require('./routes/api');
 
-// Настройка подключения к базе данных
+app.use(cors());
+app.use(express.json());
+
+// Секретный ключ для JWT (в продакшене храните его в переменных окружения)
+const JWT_SECRET = 'your_jwt_secret_key';
+
+// Подключение к базе данных
 const pool = new Pool({
   user: 'postgres',
   host: 'localhost',
@@ -14,13 +22,6 @@ const pool = new Pool({
   port: 5432,
 });
 
-app.use(cors());            // Разрешаем запросы с фронтенда
-app.use(express.json());    // Парсим JSON в запросах
-
-// Подключаем маршруты с префиксом /api
-app.use('/api', apiRoutes);
-
-// Проверка подключения к базе данных
 pool.connect((err) => {
   if (err) {
     console.error('Ошибка подключения к базе данных:', err);
@@ -29,7 +30,55 @@ pool.connect((err) => {
   }
 });
 
-// Запуск сервера
+// Middleware для проверки JWT-токена
+const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1]; // Формат: "Bearer <token>"
+
+  if (!token) {
+    return res.status(401).json({ message: 'Токен отсутствует' });
+  }
+
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (err) {
+      return res.status(403).json({ message: 'Недействительный токен' });
+    }
+    req.user = user;
+    next();
+  });
+};
+
+// Маршрут для логина
+app.post('/api/login', async (req, res) => {
+  const { username, password } = req.body;
+
+  try {
+    const result = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
+    const user = result.rows[0];
+
+    if (!user) {
+      return res.status(401).json({ message: 'Неверное имя пользователя или пароль' });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ message: 'Неверное имя пользователя или пароль' });
+    }
+
+    const token = jwt.sign(
+      { id: user.id, username: user.username, role: user.role }, // Убедитесь, что role добавляется
+      JWT_SECRET,
+      { expiresIn: '1h' }
+    );
+    res.json({ token });
+  } catch (err) {
+    res.status(500).json({ message: 'Ошибка сервера: ' + err.message });
+  }
+});
+
+// Защищаем все маршруты /api/*
+app.use('/api', authenticateToken, apiRoutes);
+
 app.listen(port, () => {
   console.log(`Сервер запущен на порту ${port}`);
 });
