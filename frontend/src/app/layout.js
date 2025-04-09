@@ -1,47 +1,24 @@
-'use client';
-
-import { useState, useEffect } from 'react';
-import { jwtDecode } from 'jwt-decode'; // Используем именованный импорт
-import Navbar from '../components/Navbar';
-import LoginModal from '../components/LoginModal';
-import './globals.css';
+// app/layout.js
+export const metadata = {
+  title: 'Quantum Service',
+  description: 'Информационная система для сервисного центра',
+};
 
 export default function RootLayout({ children }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [showLoginModal, setShowLoginModal] = useState(false);
-
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      try {
-        jwtDecode(token); // Используем jwtDecode
-        setIsAuthenticated(true);
-        setShowLoginModal(false);
-      } catch (err) {
-        setIsAuthenticated(false);
-        setShowLoginModal(true);
-        localStorage.removeItem('token');
-      }
-    } else {
-      setIsAuthenticated(false);
-      setShowLoginModal(true);
-    }
-  }, []);
-
-  const handleLoginSuccess = () => {
-    setIsAuthenticated(true);
-    setShowLoginModal(false);
-  };
-
   return (
     <html lang="ru">
       <body>
-        <Navbar />
-        {showLoginModal && !isAuthenticated ? (
-          <LoginModal onClose={handleLoginSuccess} />
-        ) : (
-          children
-        )}
+        <nav style={{ padding: '10px', background: '#f0f0f0' }}>
+          <a href="/" style={{ marginRight: '10px' }}>Главная</a>
+          <a href="/login" style={{ marginRight: '10px' }}>Вход</a>
+          <a href="/register" style={{ marginRight: '10px' }}>Регистрация</a>
+          <a href="/products" style={{ marginRight: '10px' }}>Товары</a>
+          <a href="/admin/service-requests" style={{ marginRight: '10px' }}>Заявки</a>
+          <a href="/admin/sales" style={{ marginRight: '10px' }}>Продажи</a>
+          <a href="/admin/reports" style={{ marginRight: '10px' }}>Отчёты</a>
+          <a href="/admin/stock" style={{ marginRight: '10px' }}>Склад</a>
+        </nav>
+        <main style={{ padding: '20px' }}>{children}</main>
       </body>
     </html>
   );

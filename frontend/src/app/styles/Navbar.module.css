@@ -77,3 +77,16 @@
   background-color: #005bb5;
   border-radius: 5px;
 }
+
+.logoutButton {
+  background: none;
+  border: none;
+  color: #0070f3;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.logoutButton:hover {
+  color: #005bb5;
+}

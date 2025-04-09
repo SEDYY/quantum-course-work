@@ -1,136 +1,93 @@
 'use client';
 
-import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import { jwtDecode } from 'jwt-decode';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import styles from '../app/styles/Navbar.module.css';
-import LoginModal from './LoginModal';
+import { useAuth } from '../hooks/useAuth';
 
 export default function Navbar() {
   const pathname = usePathname();
-  const router = useRouter();
-  const [userRole, setUserRole] = useState(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [showLoginModal, setShowLoginModal] = useState(false);
+  const { user, logout } = useAuth();
+  const [isOpen, setIsOpen] = useState(false);
 
-  const updateAuthState = () => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      try {
-        const decoded = jwtDecode(token);
-        setUserRole(decoded.role);
-        setIsAuthenticated(true);
-      } catch (err) {
-        setUserRole(null);
-        setIsAuthenticated(false);
-        localStorage.removeItem('token');
-        setShowLoginModal(true);
-      }
-    } else {
-      setUserRole(null);
-      setIsAuthenticated(false);
-      setShowLoginModal(true);
-    }
-  };
-
-  useEffect(() => {
-    updateAuthState();
-  }, []);
-
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    setUserRole(null);
-    setIsAuthenticated(false);
-    setShowLoginModal(true);
-    router.refresh();
-  };
-
-  const handleLoginSuccess = () => {
-    updateAuthState();
-    setShowLoginModal(false);
+  const toggleMenu = () => {
+    setIsOpen(!isOpen);
   };
 
   return (
-    <>
-      <nav className={styles.navbar}>
-        <div className={styles.logo}>
-          <Link href="/">Компьютерный салон</Link>
-        </div>
-        <ul className={styles.navLinks}>
-          <li>
-            <Link href="/" className={pathname === '/' ? styles.active : ''}>
-              Главная
-            </Link>
-          </li>
-          <li>
-            <Link href="/catalog" className={pathname === '/catalog' ? styles.active : ''}>
-              Каталог
-            </Link>
-          </li>
-          {isAuthenticated && userRole === 'admin' && (
-            <li className={styles.dropdown}>
-              <span>Админ-панель</span>
-              <ul className={styles.dropdownMenu}>
-                <li>
-                  <Link
-                    href="/admin/products"
-                    className={pathname === '/admin/products' ? styles.active : ''}
-                  >
-                    Продукты
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="/admin/services"
-                    className={pathname === '/admin/services' ? styles.active : ''}
-                  >
-                    Услуги
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="/admin/service-requests"
-                    className={pathname === '/admin/service-requests' ? styles.active : ''}
-                  >
-                    Заявки
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="/admin/customers"
-                    className={pathname === '/admin/customers' ? styles.active : ''}
-                  >
-                    Клиенты
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="/admin/orders"
-                    className={pathname === '/admin/orders' ? styles.active : ''}
-                  >
-                    Заказы
-                  </Link>
-                </li>
-              </ul>
-            </li>
-          )}
-          <li>
-            {isAuthenticated ? (
-              <button onClick={handleLogout} className={styles.logoutButton}>
-                Выход
-              </button>
-            ) : (
-              <button onClick={() => setShowLoginModal(true)} className={styles.loginButton}>
-                Вход
-              </button>
+    <nav className={styles.navbar}>
+      <div className={styles.logo}>
+        <Link href="/">Компьютерный салон</Link>
+      </div>
+      <div className={styles.hamburger} onClick={toggleMenu}>
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
+      <ul className={`${styles.navLinks} ${isOpen ? styles.active : ''}`}>
+        <li>
+          <Link href="/" className={pathname === '/' ? styles.active : ''}>
+            Главная
+          </Link>
+        </li>
+        {user ? (
+          <>
+            {user.role === 'customer' && (
+              <li>
+                <Link href={`/customer/${user.id}`} className={pathname.startsWith('/customer') ? styles.active : ''}>
+                  Личный кабинет
+                </Link>
+              </li>
             )}
-          </li>
-        </ul>
-      </nav>
-      {showLoginModal && !isAuthenticated && (
-        <LoginModal onClose={handleLoginSuccess} />
-      )}
-    </>
+            {user.role === 'admin' && (
+              <li className={styles.dropdown}>
+                <span>Админ-панель</span>
+                <ul className={styles.dropdownMenu}>
+                  <li>
+                    <Link href="/admin/sales" className={pathname === '/admin/sales' ? styles.active : ''}>
+                      Продажи
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/admin/service-requests" className={pathname === '/admin/service-requests' ? styles.active : ''}>
+                      Заявки
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/admin/stock" className={pathname === '/admin/stock' ? styles.active : ''}>
+                      Склад
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/admin/reports" className={pathname === '/admin/reports' ? styles.active : ''}>
+                      Отчёты
+                    </Link>
+                  </li>
+                </ul>
+              </li>
+            )}
+            <li>
+              <button onClick={logout} className={styles.logoutButton}>
+                Выйти
+              </button>
+            </li>
+          </>
+        ) : (
+          <>
+            <li>
+              <Link href="/login" className={pathname === '/login' ? styles.active : ''}>
+                Вход
+              </Link>
+            </li>
+            <li>
+              <Link href="/register" className={pathname === '/register' ? styles.active : ''}>
+                Регистрация
+              </Link>
+            </li>
+          </>
+        )}
+      </ul>
+    </nav>
   );
 }

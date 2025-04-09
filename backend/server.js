@@ -6,6 +6,7 @@ const bcrypt = require('bcryptjs');
 const app = express();
 const port = 3001;
 const apiRoutes = require('./routes/api');
+const nodemailer = require('nodemailer');
 
 app.use(cors());
 app.use(express.json());
@@ -75,6 +76,43 @@ app.post('/api/login', async (req, res) => {
     res.status(500).json({ message: 'Ошибка сервера: ' + err.message });
   }
 });
+
+
+// Настройка транспортера для отправки email
+const transporter = nodemailer.createTransport({
+  host: 'smtp.example.com', // Замените на ваш SMTP-сервер
+  port: 587,
+  secure: false,
+  auth: {
+    user: 'your-email@example.com',
+    pass: 'your-password',
+  },
+});
+
+// Функция для отправки уведомления
+const sendNotification = async (customerId, subject, message) => {
+  try {
+    const customer = await pool.query('SELECT email, name FROM customers WHERE id = $1', [customerId]);
+    if (!customer.rows[0]?.email) {
+      throw new Error('Email клиента не указан');
+    }
+
+    const mailOptions = {
+      from: 'your-email@example.com',
+      to: customer.rows[0].email,
+      subject,
+      text: `Уважаемый(ая) ${customer.rows[0].name},\n\n${message}\n\nС уважением,\nКоманда Компьютерного салона`,
+    };
+
+    await transporter.sendMail(mailOptions);
+    await pool.query(
+      'UPDATE customers SET last_notification = CURRENT_TIMESTAMP WHERE id = $1',
+      [customerId]
+    );
+  } catch (err) {
+    console.error('Ошибка при отправке уведомления:', err);
+  }
+};
 
 // Защищаем все маршруты /api/*
 app.use('/api', authenticateToken, apiRoutes);
